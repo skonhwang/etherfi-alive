@@ -52,39 +52,39 @@ func main() {
 }
 
 func checkEtherfiSyncClientv2() bool {
-	retBool := false
-	//cmd := exec.Command("pgrep", "-x", "etherfi_sc_v2")
-	fmt.Println("nameSync: ", nameSync)
-	cmd := exec.Command("pgrep", "-x", nameSync)
-	out, err := cmd.Output()
-	if err != nil && err.Error() != "exit status 1" {
-		fmt.Println("Error: ", err)
-		return retBool
-	}
+    retBool := false
+    fmt.Println("nameSync: ", nameSync)
 
-	if len(out) == 0 {
-		fmt.Println("etherfi_sc_v2 is not running")
-		process := nameSync
-		fmt.Println("Process name = ", nameSync)
-		//cmd := exec.Command("./etherfi_sc_v2", "listen")
-		cmd := exec.Command(process, "listen")
-		//cmd.Dir = "/Users/hwangseungkon/dsrv/2022/etherfi/sync-client-v2/"
-		cmd.Dir = dirSync
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
-		err := cmd.Run()
-		if err != nil {
-			fmt.Println("Error starting etherfi_sc_v2: ", err)
-			fmt.Println("Stderr:", stderr.String())
-			return retBool
-		}
-		return retBool
-	} else {
-		fmt.Println("etherfi_sc_v2 is running PID = ", strings.Split(string(out), "\n"))
-		retBool = true
-		return retBool
-	}
+    cmd := exec.Command("pidof", nameSync)
+    pidofOutput, err := cmd.Output()
+    if err == nil {
+        fmt.Println(nameSync, "is running PID =", strings.TrimSpace(string(pidofOutput)))
+        retBool = true
+    } else if err != nil {
+        if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+            fmt.Println(nameSync, "is not running")
 
+            process := nameSync
+            fmt.Println("Process name =", nameSync)
+            cmd := exec.Command(process, "listen")
+            cmd.Dir = dirSync
+            var stderr bytes.Buffer
+            cmd.Stderr = &stderr
+            err := cmd.Start()
+            if err != nil {
+                fmt.Println("Error starting", nameSync, ":", err)
+                fmt.Println("Stderr:", stderr.String())
+                return retBool
+            }
+	    fmt.Println("Successful to run ", nameSync)
+        } else {
+            //Another error
+            fmt.Println("Error:", err)
+            return retBool
+        }
+    }
+
+    return retBool
 }
 
 func pluginFeature(info, option map[string]*structpb.Value) (sdk.CallResponse, error) {
